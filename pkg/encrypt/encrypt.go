@@ -2,9 +2,9 @@ package encrypt
 
 import "math"
 
-// Round up to nearest multiple of 128
-func Ceil128(x int) int {
-	return 128 * int(math.Ceil(float64(x)/float64(128)))
+// Round up to nearest multiple of 32 bytes
+func Ceil32(x int) int {
+	return 32 * int(math.Ceil(float64(x)/float64(128)))
 }
 
 // Pad (or slice) the byte array b to fit length n. Padded space will be filled by repeating b.

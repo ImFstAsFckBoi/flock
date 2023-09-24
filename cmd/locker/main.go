@@ -2,43 +2,87 @@ package main
 
 import (
 	"crypto/aes"
+	"crypto/cipher"
 	"fmt"
 	"os"
 
 	"github.com/ImFstAsFckBoi/locker/pkg/encrypt"
+	"github.com/ImFstAsFckBoi/locker/pkg/file"
+	"github.com/ImFstAsFckBoi/locker/pkg/utils"
 	"golang.org/x/term"
 )
 
-func check(err error) {
+func GetPasswordCipher(prompt string) (cipher.Block, error) {
+
+	fmt.Print(prompt)
+	rawPasswd, err := term.ReadPassword(0)
+	fmt.Println("")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
+	key := encrypt.BytePadRepeat(rawPasswd, 32)
+
+	return aes.NewCipher(key)
+}
+
+func GetFileArgs() (string, error) {
+	args := os.Args[1:]
+	file := args[0]
+	_, err := os.Stat(file)
+
+	if err != nil {
+		return "", err
+	}
+
+	return file, nil
+
 }
 
 func main() {
+	cipher, err := GetPasswordCipher("Enter password: ")
+	utils.ErrCheck(err)
+
+	// path, err := GetFileArgs()
+	path := "./test.txt"
+	utils.ErrCheck(err)
+
 	// Read  file
-	data, err := os.ReadFile("./test.txt")
-	check(err)
+	data, err := os.ReadFile(path)
+	utils.ErrCheck(err)
 
-	fmt.Print("Enter Password: ")
-	rawPasswd, err := term.ReadPassword(0)
-	check(err)
-	fmt.Println("")
-	key := encrypt.BytePadRepeat(rawPasswd, 32)
-
-	cipher, err := aes.NewCipher(key)
-	check(err)
-
-	padSize := encrypt.Ceil128(len(data))
+	padSize := encrypt.Ceil32(len(data))
+	utils.ErrCheck(err)
 
 	encBuff := make([]byte, padSize)
 
 	cipher.Encrypt(encBuff, encrypt.BytePadZero(data, padSize))
 
-	fmt.Println(encBuff)
+	header := file.MakeHeader("0.1", padSize-len(data))
+
+	f, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0600)
+	utils.ErrCheck(err)
+	_, err = f.Write([]byte(header))
+	utils.ErrCheck(err)
+
+	_, err = f.Write(encBuff)
+	utils.ErrCheck(err)
+	f.Close()
+
+	fileData, err := os.ReadFile(path + ".lock")
+
+	info, dataStart, err := file.ReadHeaderInfo(fileData)
+
+	encData := fileData[dataStart:]
 
 	dencBuff := make([]byte, padSize)
-	cipher.Decrypt(dencBuff, encBuff)
+	cipher.Decrypt(dencBuff, encData)
 
-	fmt.Println(string(dencBuff))
+	dencBuff = dencBuff[0 : len(dencBuff)-info.Ntz]
+
+	f, err = os.OpenFile(path+".unlocked", os.O_CREATE|os.O_RDWR, 0600)
+	utils.ErrCheck(err)
+	_, err = f.Write(dencBuff)
+	utils.ErrCheck(err)
+	f.Close()
 }

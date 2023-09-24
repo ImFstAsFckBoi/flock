@@ -4,7 +4,7 @@ BINARY := locker
 ENTRY := ${PKG}/cmd/locker
 
 build:
-	go build -o ${TARGET}/${BINARY} ${PKG}/cmd/locker
+	go build -o ${BIN}/${BINARY} ${PKG}/cmd/locker
 
 build-linux32:
 	GOARCH=386   GOOS=linux   go build -o ${BIN}/${BINARY}-linux32 ${ENTRY}

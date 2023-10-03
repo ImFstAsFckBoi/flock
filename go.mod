@@ -1,4 +1,4 @@
-module github.com/ImFstAsFckBoi/locker
+module github.com/ImFstAsFckBoi/flock
 
 go 1.21.1
 

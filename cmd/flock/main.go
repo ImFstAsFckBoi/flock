@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ImFstAsFckBoi/locker/pkg/encrypt"
-	"github.com/ImFstAsFckBoi/locker/pkg/file"
-	"github.com/ImFstAsFckBoi/locker/pkg/utils"
+	"github.com/ImFstAsFckBoi/flock/pkg/encrypt"
+	"github.com/ImFstAsFckBoi/flock/pkg/file"
+	"github.com/ImFstAsFckBoi/flock/pkg/utils"
 	"golang.org/x/term"
 )
 
@@ -48,26 +48,27 @@ func main() {
 	utils.ErrCheck(err)
 
 	// Read  file
-	data, err := os.ReadFile(path)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
+	writer, err := file.NewLockWriter(path+".lock", "0.1")
 	utils.ErrCheck(err)
 
-	padSize := encrypt.Ceil32(len(data))
-	utils.ErrCheck(err)
+	chunkSz := 32
 
-	encBuff := make([]byte, padSize)
+	inBuff := make([]byte, chunkSz)
+	encBuff := make([]byte, chunkSz)
+	n := chunkSz
+	for n == chunkSz {
+		n, err = f.Read(inBuff)
+		utils.ErrCheck(err)
+		cipher.Encrypt(encBuff, encrypt.BytePadZero(inBuff, chunkSz))
+		_, err = writer.Write(encBuff)
+		utils.ErrCheck(err)
+	}
 
-	cipher.Encrypt(encBuff, encrypt.BytePadZero(data, padSize))
+	err = writer.FlushHeader()
+	// Read .lock
 
-	header := file.MakeHeader("0.1", padSize-len(data))
-
-	f, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0600)
-	utils.ErrCheck(err)
-	_, err = f.Write([]byte(header))
-	utils.ErrCheck(err)
-
-	_, err = f.Write(encBuff)
-	utils.ErrCheck(err)
-	f.Close()
+	padSize := encrypt.Ceil32(writer.WriteCount)
 
 	fileData, err := os.ReadFile(path + ".lock")
 

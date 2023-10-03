@@ -14,7 +14,7 @@ type HeaderInfo struct {
 
 /* Header format
 Magic number:       0x19650
-Client/Version:     locker/0.1.2
+Client/Version:     flock/0.1.2
 trailning zeros:    54 (32 bytes for expanding ntz)
 Free space(unused): gz_compress=1
                     aes: 256
@@ -26,7 +26,7 @@ data...
 */
 
 var HEADER_MAGIC_NUMBER = "\001\011\006\005\000\n"
-var HEADER_VERSION = "locker/%VERSION\n"
+var HEADER_VERSION = "flock/%VERSION\n"
 var HEADER_NTZ = "%NTZ                                \n"
 var HEADER_TERMINATOR = "===== END HEADER =====\n"
 var HEADER_FMT = HEADER_MAGIC_NUMBER + HEADER_VERSION + HEADER_NTZ + HEADER_TERMINATOR

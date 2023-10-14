@@ -15,8 +15,8 @@ type LockWriter struct {
 	File        *os.File
 	Count       int
 	cipher      *cipher.Block
-	Info        HeaderInfo
-	seeks       headerSeeks
+	Info        *HeaderInfo
+	seeks       HeaderSeeks
 	buffer      []byte
 	bufferCount int
 }
@@ -25,8 +25,8 @@ var deadWriter LockWriter = LockWriter{
 	nil,
 	0,
 	nil,
-	HeaderInfo{},
-	headerSeeks{},
+	nil,
+	HeaderSeeks{},
 	nil,
 	0,
 }
@@ -45,23 +45,17 @@ func NewLockWriter(path string, cipher *cipher.Block, client string, version str
 		f,
 		0,
 		cipher,
-		HeaderInfo{client, version, 0, 0},
+		nil,
 		DefaultHeaderSeeks,
 		make([]byte, 32),
 		0,
 	}
 
-	freeSpace, fss, err := MakeFreeSpaceBuffer([]string{"Meow! :3"})
+	lw.Info, err = NewHeaderInfo(client, version, nil)
 
-	if err != nil {
-		return nil, err
-	}
+	lw.seeks = lw.Info.GetSeeks()
 
-	lw.Info.Fss = fss
-	lw.seeks.terminator = H_FREEBEGIN + int64(len(freeSpace))
-	lw.seeks.data = int64(H_MINSIZE + len(freeSpace))
-
-	header, err := MakeHeader(lw.Info, freeSpace)
+	header, err := lw.Info.MakeHeader()
 
 	if err != nil {
 		return nil, err

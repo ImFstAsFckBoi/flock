@@ -69,11 +69,11 @@ func (info *HeaderInfo) MakeHeader() ([]byte, error) {
 	bytesFS := info.FSAsBytes()
 
 	copy(headerBuffer[0:H_CLIENTBEGIN], HEADER_MAGIC_NUMBER)
-	copy(headerBuffer[H_CLIENTBEGIN:H_DIVIDERBEGIN], []byte(info.Client))
+	copy(headerBuffer[H_CLIENTBEGIN:H_CLIENTEND], []byte(info.Client))
 	headerBuffer[H_DIVIDERBEGIN] = '/'
-	copy(headerBuffer[H_VERSIONBEGIN:H_NTZBEGIN], []byte(info.Version))
+	copy(headerBuffer[H_VERSIONBEGIN:H_VERSIONEND], []byte(info.Version))
 
-	binary.BigEndian.PutUint32(headerBuffer[H_NTZBEGIN:H_FSSBEGIN], info.Ntz)
+	binary.BigEndian.PutUint32(headerBuffer[H_NTZBEGIN:H_NTZEND], info.Ntz)
 	headerBuffer[H_NTZEND-1] = '\n'
 
 	binary.BigEndian.PutUint32(headerBuffer[H_FSSBEGIN:H_FSSEND], info.Fss)

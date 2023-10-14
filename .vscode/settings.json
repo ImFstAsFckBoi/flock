@@ -1,5 +1,26 @@
 {
     "cSpell.words": [
-        "GOARCH"
+        "CLIENTBEGIN",
+        "CLIENTEND",
+        "CLIENTLEN",
+        "DIVIDERBEGIN",
+        "DIVIDEREND",
+        "DIVIDERLEN",
+        "FREEBEGIN",
+        "FSSBEGIN",
+        "FSSEND",
+        "FSSLEN",
+        "GOARCH",
+        "MAGICBEGIN",
+        "MAGICEND",
+        "MAGICLEN",
+        "MINSIZE",
+        "NTZBEGIN",
+        "NTZEND",
+        "NTZLEN",
+        "TERMLEN",
+        "VERSIONBEGIN",
+        "VERSIONEND",
+        "VERSIONLEN"
     ]
 }

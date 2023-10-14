@@ -48,42 +48,52 @@ func main() {
 	utils.ErrCheck(err)
 
 	// Read  file
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
-	writer, err := file.NewLockWriter(path+".lock", "0.1")
+	f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0755)
+	utils.ErrCheck(err)
+	info, err := f.Stat()
+	utils.ErrCheck(err)
+	defer f.Close()
+	writer, err := file.NewLockWriter(
+		path+".lock",
+		&cipher,
+		"flock",
+		"0.1",
+		info.Mode().Perm(),
+	)
+	defer writer.Close()
+
 	utils.ErrCheck(err)
 
-	chunkSz := 32
+	chunkSz := 20
 
 	inBuff := make([]byte, chunkSz)
-	encBuff := make([]byte, chunkSz)
+	// encBuff := make([]byte, chunkSz)
 	n := chunkSz
 	for n == chunkSz {
 		n, err = f.Read(inBuff)
 		utils.ErrCheck(err)
-		cipher.Encrypt(encBuff, encrypt.BytePadZero(inBuff, chunkSz))
-		_, err = writer.Write(encBuff)
+		_, err = writer.Write(inBuff[0:n])
 		utils.ErrCheck(err)
 	}
 
-	err = writer.FlushHeader()
 	// Read .lock
 
-	padSize := encrypt.Ceil32(writer.WriteCount)
+	//padSize := encrypt.Ceil32(writer.WriteCount)
 
-	fileData, err := os.ReadFile(path + ".lock")
+	//fileData, err := os.ReadFile(path + ".lock")
 
-	info, dataStart, err := file.ReadHeaderInfo(fileData)
+	//info, dataStart, err := file.ReadHeaderInfo(fileData)
 
-	encData := fileData[dataStart:]
+	//encData := fileData[dataStart:]
 
-	dencBuff := make([]byte, padSize)
-	cipher.Decrypt(dencBuff, encData)
+	//dencBuff := make([]byte, padSize)
+	//cipher.Decrypt(dencBuff, encData)
 
-	dencBuff = dencBuff[0 : len(dencBuff)-info.Ntz]
+	//dencBuff = dencBuff[0 : len(dencBuff)-info.Ntz]
 
-	f, err = os.OpenFile(path+".unlocked", os.O_CREATE|os.O_RDWR, 0600)
-	utils.ErrCheck(err)
-	_, err = f.Write(dencBuff)
-	utils.ErrCheck(err)
-	f.Close()
+	//f, err = os.OpenFile(path+".unlocked", os.O_CREATE|os.O_RDWR, 0600)
+	//utils.ErrCheck(err)
+	//_, err = f.Write(dencBuff)
+	//utils.ErrCheck(err)
+	//f.Close()
 }

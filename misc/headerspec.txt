@@ -1,11 +1,11 @@
 
 SPEC:
     0:	[ 5 byte magic number ][ 1 byte \n]
-    6:	[ 30 byte client]
-    36:	[ 1 byte / ]
+    6:	[ 30 byte client string ]
+    36:	[ 1 byte / divider ]
     37:	[ 30 byte version string ][ 1 byte \n]
     68:	[ 4 byte uint32_t big endian ntz ][ 1 byte \n]
-    73: [ 4 byte uint32_t big endian free space size][ 1 byte \n ]
+    73: [ 4 byte uint32_t big endian free space size ][ 1 byte \n ]
     78: [ free space line ][ 1 byte \n ]
         [ free space line ][ 1 byte \n ]
         [ free space line ][ 1 byte \n ]

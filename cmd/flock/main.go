@@ -47,53 +47,60 @@ func main() {
 	path := "./test.txt"
 	utils.ErrCheck(err)
 
-	// Read  file
-	f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0755)
-	utils.ErrCheck(err)
-	info, err := f.Stat()
-	utils.ErrCheck(err)
-	defer f.Close()
-	writer, err := file.NewLockWriter(
-		path+".lock",
-		&cipher,
-		"flock",
-		"0.1",
-		info.Mode().Perm(),
-	)
-	defer writer.Close()
+	write := true
+	read := true
 
-	utils.ErrCheck(err)
-
-	chunkSz := 20
-
-	inBuff := make([]byte, chunkSz)
-	// encBuff := make([]byte, chunkSz)
-	n := chunkSz
-	for n == chunkSz {
-		n, err = f.Read(inBuff)
+	if write {
+		f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0755)
 		utils.ErrCheck(err)
-		_, err = writer.Write(inBuff[0:n])
+		info, err := f.Stat()
 		utils.ErrCheck(err)
+		defer f.Close()
+		writer, err := file.NewLockWriter(
+			path+".locked",
+			&cipher,
+			"flock",
+			"0.1",
+			info.Mode().Perm(),
+		)
+
+		utils.ErrCheck(err)
+
+		chunkSz := 20
+
+		inBuff := make([]byte, chunkSz)
+		// encBuff := make([]byte, chunkSz)
+		n := chunkSz
+		for n == chunkSz {
+			n, err = f.Read(inBuff)
+			utils.ErrCheck(err)
+			_, err = writer.Write(inBuff[0:n])
+			utils.ErrCheck(err)
+		}
+
+		writer.Close()
 	}
 
-	// Read .lock
+	if read {
+		reader, err := file.NewLockReader(path+".locked", &cipher)
+		utils.ErrCheck(err)
 
-	//padSize := encrypt.Ceil32(writer.WriteCount)
+		println("Free-space:")
+		for _, s := range reader.Info.FreeSpace {
+			println(s)
+		}
+		println("\nContent:")
 
-	//fileData, err := os.ReadFile(path + ".lock")
+		chunkSz := 8
 
-	//info, dataStart, err := file.ReadHeaderInfo(fileData)
+		inBuff := make([]byte, chunkSz)
+		n := chunkSz
+		for n == chunkSz {
+			n, err = reader.Read(inBuff)
+			utils.ErrCheck(err)
+			print(string(inBuff))
+		}
 
-	//encData := fileData[dataStart:]
-
-	//dencBuff := make([]byte, padSize)
-	//cipher.Decrypt(dencBuff, encData)
-
-	//dencBuff = dencBuff[0 : len(dencBuff)-info.Ntz]
-
-	//f, err = os.OpenFile(path+".unlocked", os.O_CREATE|os.O_RDWR, 0600)
-	//utils.ErrCheck(err)
-	//_, err = f.Write(dencBuff)
-	//utils.ErrCheck(err)
-	//f.Close()
+		reader.Close()
+	}
 }

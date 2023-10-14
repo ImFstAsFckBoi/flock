@@ -51,7 +51,7 @@ func NewLockWriter(path string, cipher *cipher.Block, client string, version str
 		0,
 	}
 
-	lw.Info, err = NewHeaderInfo(client, version, nil)
+	lw.Info, err = NewHeaderInfo(client, version, []string{"Meow! :3"})
 
 	lw.seeks = lw.Info.GetSeeks()
 
@@ -73,7 +73,8 @@ func NewLockWriter(path string, cipher *cipher.Block, client string, version str
 func (lw *LockWriter) Write(p []byte) (int, error) {
 	pLen := len(p)
 
-	fmt.Printf("Write content: %s\n", string(p))
+	// TODO: REMOVE DEBUG
+	// fmt.Printf("Write content: %s\n", string(p))
 
 	pIdx := 0
 	flushes := 0
@@ -103,8 +104,8 @@ func (lw *LockWriter) Write(p []byte) (int, error) {
 		}
 
 	}
-
-	fmt.Printf("Buffer content on exit: %s\n", string(lw.buffer))
+	// TODO: REMOVE DEBUG
+	// fmt.Printf("Buffer content on exit: %s\n", string(lw.buffer))
 
 	return flushes * 32, nil
 }
@@ -122,8 +123,8 @@ func (lw *LockWriter) FlushBuffer() error {
 		return nil
 	}
 
-	// TODO: DEBUG
-	fmt.Printf("Buffer content: %s\n", string(lw.buffer))
+	// TODO: REMOVE DEBUG
+	// fmt.Printf("Buffer content: %s\n", string(lw.buffer))
 
 	_, err := lw.File.Write(lw.buffer)
 
@@ -136,7 +137,6 @@ func (lw *LockWriter) FlushBuffer() error {
 	lw.Info.Ntz = uint32(32 - lw.bufferCount)
 	lw.bufferCount = 0
 
-	// TODO: DEBUG
 	utils.Memset[byte](lw.buffer, 0)
 
 	return nil

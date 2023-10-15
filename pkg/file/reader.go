@@ -14,7 +14,7 @@ import (
 
 type LockReader struct {
 	File        *os.File
-	cipher      *cipher.Block
+	cipher      cipher.Block
 	Info        HeaderInfo
 	buffer      []byte
 	bufferStart int
@@ -26,11 +26,11 @@ var deadReader LockReader = LockReader{
 	nil,
 	HeaderInfo{},
 	nil,
-	32,
-	32,
+	16,
+	16,
 }
 
-func NewLockReader(path string, cipher *cipher.Block) (*LockReader, error) {
+func NewLockReader(path string, cipher cipher.Block) (*LockReader, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, err
@@ -40,9 +40,9 @@ func NewLockReader(path string, cipher *cipher.Block) (*LockReader, error) {
 		f,
 		cipher,
 		HeaderInfo{},
-		make([]byte, 32),
-		32,
-		32,
+		make([]byte, 16),
+		16,
+		16,
 	}
 
 	err = rw.ReadHeaderInfo()
@@ -68,20 +68,13 @@ func (rw *LockReader) Read(b []byte) (int, error) {
 	bIdx := 0
 	for bIdx < bLen {
 		if rw.bufferStart >= rw.bufferEnd {
-			// TODO: Replace with custom method
-			_, err1 := rw.File.Read(rw.buffer)
-			seek, err2 := rw.File.Seek(0, io.SeekCurrent)
-			info, err3 := rw.File.Stat()
-			if errors.Join(err1, err2, err3) != nil {
-				utils.Memset[byte](b[bIdx:bLen], 0)
+			_, err := rw.FillBuffer()
+			if err == io.EOF && bIdx == 0 {
 				return bIdx, err
+			} else if err == io.EOF {
+				utils.Memset[byte](b[bIdx:bLen], 0)
+				return bIdx, nil
 			}
-
-			if seek == info.Size() {
-				rw.bufferEnd = 32 - int(rw.Info.Ntz)
-			}
-
-			rw.bufferStart = 0
 		}
 
 		needed := bLen - bIdx
@@ -101,6 +94,32 @@ func (rw *LockReader) Read(b []byte) (int, error) {
 	}
 
 	return bIdx, nil
+}
+
+func (rw *LockReader) FillBuffer() (int, error) {
+	// TODO: Deal with n | 16 edge case
+	n, err := rw.File.Read(rw.buffer)
+	if err != nil {
+		return n, err
+	}
+
+	rw.cipher.Decrypt(rw.buffer, rw.buffer)
+
+	// Test if EOF is next
+	seek, err1 := rw.File.Seek(0, io.SeekCurrent)
+	info, err2 := rw.File.Stat()
+
+	if errors.Join(err1, err2) != nil {
+		return n, err
+	}
+
+	if seek == info.Size() {
+		rw.bufferEnd = 16 - int(rw.Info.Ntz)
+	}
+
+	rw.bufferStart = 0
+
+	return n, nil
 }
 
 func (rw *LockReader) ReadHeaderInfo() error {

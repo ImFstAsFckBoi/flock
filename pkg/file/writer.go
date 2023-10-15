@@ -14,7 +14,7 @@ import (
 type LockWriter struct {
 	File        *os.File
 	Count       int
-	cipher      *cipher.Block
+	cipher      cipher.Block
 	Info        *HeaderInfo
 	seeks       HeaderSeeks
 	buffer      []byte
@@ -35,7 +35,7 @@ var deadWriter LockWriter = LockWriter{
 Wrapper around file to automatically write the lock file header and encrypt
 all written in chunks.
 */
-func NewLockWriter(path string, cipher *cipher.Block, client string, version string, perms fs.FileMode) (*LockWriter, error) {
+func NewLockWriter(path string, cipher cipher.Block, client string, version string, perms fs.FileMode) (*LockWriter, error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, perms)
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func NewLockWriter(path string, cipher *cipher.Block, client string, version str
 		cipher,
 		nil,
 		DefaultHeaderSeeks,
-		make([]byte, 32),
+		make([]byte, 16),
 		0,
 	}
 
@@ -79,11 +79,11 @@ func (lw *LockWriter) Write(p []byte) (int, error) {
 	pIdx := 0
 	flushes := 0
 	for pIdx < pLen {
-		needed := 32 - lw.bufferCount
+		needed := 16 - lw.bufferCount
 		have := pLen - pIdx
 
 		if needed < have {
-			copy(lw.buffer[lw.bufferCount:32], p[pIdx:pIdx+needed])
+			copy(lw.buffer[lw.bufferCount:16], p[pIdx:pIdx+needed])
 
 			pIdx += needed
 			lw.bufferCount += needed
@@ -94,10 +94,10 @@ func (lw *LockWriter) Write(p []byte) (int, error) {
 			lw.bufferCount += have
 		}
 
-		if lw.bufferCount >= 32 {
-			err := lw.FlushBuffer()
+		if lw.bufferCount >= 16 {
+			_, err := lw.FlushBuffer()
 			if err != nil {
-				return flushes * 32, err
+				return flushes * 16, err
 			}
 
 			flushes += 1
@@ -107,39 +107,41 @@ func (lw *LockWriter) Write(p []byte) (int, error) {
 	// TODO: REMOVE DEBUG
 	// fmt.Printf("Buffer content on exit: %s\n", string(lw.buffer))
 
-	return flushes * 32, nil
+	return flushes * 16, nil
 }
 
-func (lw *LockWriter) Close() error {
-	err := lw.FlushBuffer()
+func (lw *LockWriter) Close() (int, error) {
+	n, err := lw.FlushBuffer()
 	err = errors.Join(err, lw.FlushHeader())
 	err = errors.Join(err, lw.File.Close())
 
-	return err
+	return n, err
 }
 
-func (lw *LockWriter) FlushBuffer() error {
+func (lw *LockWriter) FlushBuffer() (int, error) {
 	if lw.bufferCount == 0 {
-		return nil
+		return 0, nil
 	}
 
 	// TODO: REMOVE DEBUG
 	// fmt.Printf("Buffer content: %s\n", string(lw.buffer))
 
-	_, err := lw.File.Write(lw.buffer)
+	lw.cipher.Encrypt(lw.buffer, lw.buffer)
+
+	n, err := lw.File.Write(lw.buffer)
 
 	if err != nil {
-		return errors.New(
+		return n, errors.New(
 			fmt.Sprintf("Failed to write buffer to '%s'", lw.File.Name()),
 		)
 	}
 
-	lw.Info.Ntz = uint32(32 - lw.bufferCount)
+	lw.Info.Ntz = uint32(16 - lw.bufferCount)
 	lw.bufferCount = 0
 
 	utils.Memset[byte](lw.buffer, 0)
 
-	return nil
+	return n, nil
 }
 
 func (lw *LockWriter) FlushHeader() error {

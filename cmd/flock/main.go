@@ -40,17 +40,16 @@ func GetFileArgs() (string, error) {
 }
 
 func main() {
-	cipher, err := GetPasswordCipher("Enter password: ")
-	utils.ErrCheck(err)
 
 	// path, err := GetFileArgs()
 	path := "./test.txt"
-	utils.ErrCheck(err)
 
 	write := true
 	read := true
 
 	if write {
+		cipher, err := GetPasswordCipher("Enter password: ")
+		utils.ErrCheck(err)
 		f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0755)
 		utils.ErrCheck(err)
 		info, err := f.Stat()
@@ -58,7 +57,7 @@ func main() {
 		defer f.Close()
 		writer, err := file.NewLockWriter(
 			path+".locked",
-			&cipher,
+			cipher,
 			"flock",
 			"0.1",
 			info.Mode().Perm(),
@@ -66,23 +65,34 @@ func main() {
 
 		utils.ErrCheck(err)
 
-		chunkSz := 20
+		chunkSz := 100
 
 		inBuff := make([]byte, chunkSz)
 		// encBuff := make([]byte, chunkSz)
 		n := chunkSz
+		wc := 0
+		rc := 0
+		println("Encrypting...")
 		for n == chunkSz {
 			n, err = f.Read(inBuff)
 			utils.ErrCheck(err)
-			_, err = writer.Write(inBuff[0:n])
+			n1, err := writer.Write(inBuff[0:n])
 			utils.ErrCheck(err)
+			rc += n
+			wc += n1
 		}
 
-		writer.Close()
+		n, _ = writer.Close()
+		wc += n
+
+		fmt.Printf("Read: %d bytes.\n", rc)
+		fmt.Printf("Wrote: %d bytes.\n", wc)
 	}
 
 	if read {
-		reader, err := file.NewLockReader(path+".locked", &cipher)
+		cipher, err := GetPasswordCipher("Enter password: ")
+		utils.ErrCheck(err)
+		reader, err := file.NewLockReader(path+".locked", cipher)
 		utils.ErrCheck(err)
 
 		println("Free-space:")
@@ -91,16 +101,19 @@ func main() {
 		}
 		println("\nContent:")
 
-		chunkSz := 8
+		chunkSz := 100
 
 		inBuff := make([]byte, chunkSz)
 		n := chunkSz
+		rc := 0
 		for n == chunkSz {
 			n, err = reader.Read(inBuff)
 			utils.ErrCheck(err)
 			print(string(inBuff))
+			rc += n
 		}
 
+		fmt.Printf("Read: %d bytes.\n", rc)
 		reader.Close()
 	}
 }

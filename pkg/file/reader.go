@@ -2,6 +2,7 @@ package file
 
 import (
 	"bytes"
+	"crypto/aes"
 	"crypto/cipher"
 	"encoding/binary"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
+	"golang.org/x/crypto/blake2b"
 )
 
 type LockReader struct {
@@ -30,15 +32,20 @@ var deadReader LockReader = LockReader{
 	16,
 }
 
-func NewLockReader(path string, cipher cipher.Block) (*LockReader, error) {
+func NewLockReader(path string, key []byte, salt [16]byte) (*LockReader, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 
 	rw := LockReader{
 		f,
-		cipher,
+		c,
 		HeaderInfo{},
 		make([]byte, 16),
 		16,
@@ -48,6 +55,10 @@ func NewLockReader(path string, cipher cipher.Block) (*LockReader, error) {
 	err = rw.ReadHeaderInfo()
 	if err != nil {
 		return nil, err
+	}
+
+	if rw.Info.Hash != blake2b.Sum256(key) {
+		return nil, errors.New("Password key does not match hash in header!")
 	}
 
 	return &rw, nil
@@ -142,6 +153,9 @@ func (rw *LockReader) ReadHeaderInfo() error {
 		string(preBuff[H_VERSIONBEGIN:H_VERSIONEND]),
 		"\000",
 	)
+
+	copy(rw.Info.Salt[:], preBuff[H_SALTBEGIN:H_SALTEND-1])
+	copy(rw.Info.Hash[:], preBuff[H_HASHBEGIN:H_HASHEND-1])
 
 	rw.Info.Ntz = binary.BigEndian.Uint32(preBuff[H_NTZBEGIN : H_NTZEND-1])
 	rw.Info.Fss = binary.BigEndian.Uint32(preBuff[H_FSSBEGIN : H_FSSEND-1])

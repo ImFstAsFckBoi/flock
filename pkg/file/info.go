@@ -9,13 +9,15 @@ import (
 type HeaderInfo struct {
 	Client    string
 	Version   string
+	Salt      [16]byte
+	Hash      [32]byte
 	Ntz       uint32
 	Fss       uint32
 	FreeSpace []string
 }
 
-func NewHeaderInfo(client string, version string, freeSpace []string) (*HeaderInfo, error) {
-	info := HeaderInfo{client, version, 0, 0, nil}
+func NewHeaderInfo(client string, version string, salt [16]byte, hash [32]byte, freeSpace []string) (*HeaderInfo, error) {
+	info := HeaderInfo{client, version, salt, hash, 0, 0, nil}
 	err := info.UpdateFS(freeSpace)
 	if err != nil {
 		return nil, err
@@ -72,6 +74,13 @@ func (info *HeaderInfo) MakeHeader() ([]byte, error) {
 	copy(headerBuffer[H_CLIENTBEGIN:H_CLIENTEND], []byte(info.Client))
 	headerBuffer[H_DIVIDERBEGIN] = '/'
 	copy(headerBuffer[H_VERSIONBEGIN:H_VERSIONEND], []byte(info.Version))
+	headerBuffer[H_VERSIONEND-1] = '\n'
+
+	copy(headerBuffer[H_SALTBEGIN:H_SALTEND], info.Salt[:])
+	headerBuffer[H_SALTEND-1] = '\n'
+
+	copy(headerBuffer[H_HASHBEGIN:H_HASHEND], info.Hash[:])
+	headerBuffer[H_HASHEND-1] = '\n'
 
 	binary.BigEndian.PutUint32(headerBuffer[H_NTZBEGIN:H_NTZEND], info.Ntz)
 	headerBuffer[H_NTZEND-1] = '\n'

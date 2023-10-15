@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"fmt"
 	"os"
 
@@ -12,7 +10,7 @@ import (
 	"golang.org/x/term"
 )
 
-func GetPasswordCipher(prompt string) (cipher.Block, error) {
+func GetPasswordKey(prompt string) ([]byte, error) {
 
 	fmt.Print(prompt)
 	rawPasswd, err := term.ReadPassword(0)
@@ -21,9 +19,7 @@ func GetPasswordCipher(prompt string) (cipher.Block, error) {
 		return nil, err
 	}
 
-	key := encrypt.BytePadRepeat(rawPasswd, 32)
-
-	return aes.NewCipher(key)
+	return encrypt.BytePadRepeat(rawPasswd, 32), nil
 }
 
 func GetFileArgs() (string, error) {
@@ -48,7 +44,7 @@ func main() {
 	read := true
 
 	if write {
-		cipher, err := GetPasswordCipher("Enter password: ")
+		key, err := GetPasswordKey("Enter password: ")
 		utils.ErrCheck(err)
 		f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0755)
 		utils.ErrCheck(err)
@@ -57,7 +53,8 @@ func main() {
 		defer f.Close()
 		writer, err := file.NewLockWriter(
 			path+".locked",
-			cipher,
+			key,
+			[16]byte{},
 			"flock",
 			"0.1",
 			info.Mode().Perm(),
@@ -72,7 +69,6 @@ func main() {
 		n := chunkSz
 		wc := 0
 		rc := 0
-		println("Encrypting...")
 		for n == chunkSz {
 			n, err = f.Read(inBuff)
 			utils.ErrCheck(err)
@@ -90,9 +86,9 @@ func main() {
 	}
 
 	if read {
-		cipher, err := GetPasswordCipher("Enter password: ")
+		key, err := GetPasswordKey("Enter password: ")
 		utils.ErrCheck(err)
-		reader, err := file.NewLockReader(path+".locked", cipher)
+		reader, err := file.NewLockReader(path+".locked", key, [16]byte{})
 		utils.ErrCheck(err)
 
 		println("Free-space:")

@@ -1,12 +1,15 @@
 package file
 
 import (
+	"crypto/aes"
 	"crypto/cipher"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
+
+	"golang.org/x/crypto/blake2b"
 
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
 )
@@ -35,8 +38,13 @@ var deadWriter LockWriter = LockWriter{
 Wrapper around file to automatically write the lock file header and encrypt
 all written in chunks.
 */
-func NewLockWriter(path string, cipher cipher.Block, client string, version string, perms fs.FileMode) (*LockWriter, error) {
+func NewLockWriter(path string, key []byte, salt [16]byte, client string, version string, perms fs.FileMode) (*LockWriter, error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, perms)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
@@ -44,14 +52,14 @@ func NewLockWriter(path string, cipher cipher.Block, client string, version stri
 	lw := LockWriter{
 		f,
 		0,
-		cipher,
+		c,
 		nil,
 		DefaultHeaderSeeks,
 		make([]byte, 16),
 		0,
 	}
 
-	lw.Info, err = NewHeaderInfo(client, version, []string{"Meow! :3"})
+	lw.Info, err = NewHeaderInfo(client, version, salt, blake2b.Sum256(key), []string{"Meow! :3"})
 
 	lw.seeks = lw.Info.GetSeeks()
 

@@ -1,23 +1,28 @@
 
 SPEC:
-    0:	[ 5 byte magic number ][ 1 byte \n]
-    6:	[ 30 byte client string ]
-    36:	[ 1 byte / divider ]
-    37:	[ 30 byte version string ][ 1 byte \n]
-    68:	[ 4 byte uint32_t big endian ntz ][ 1 byte \n]
-    73: [ 4 byte uint32_t big endian free space size ][ 1 byte \n ]
-    78: [ free space line ][ 1 byte \n ]
-        [ free space line ][ 1 byte \n ]
-        [ free space line ][ 1 byte \n ]
-        [ free space line ][ 1 byte \n ]
-        [ free space line ][ 1 byte \n ]
-78+fss: [ 20 byte terminator ][ 1 byte \n]
-99+fss: data
+    0:	 [ 5 byte magic number ][ 1 byte \n]
+    6:	 [ 30 byte client string ]
+    36:	 [ 1 byte / divider ]
+    37:	 [ 30 byte version string ][ 1 byte \n]
+    68:  [ 16 byte argon2 salt ][ 1 byte \n]
+    85:  [ 32 byte blake2 key hash ][ 1 byte \n]
+    118  [ 4 byte uint32_t big endian ntz ][ 1 byte \n]
+    123: [ 4 byte uint32_t big endian free space size ][ 1 byte \n ]
+    128: [ free space line ][ 1 byte \n ]
+         [ free space line ][ 1 byte \n ]
+         [ free space line ][ 1 byte \n ]
+         [ free space line ][ 1 byte \n ]
+         [ free space line ][ 1 byte \n ]
+78+fss:  [ 20 byte terminator ][ 1 byte \n]
+99+fss:  data
 
 EXAMPLE:
-    Magic number:    0x19650
+    Magic number:    19650
     Client/Version:  flock/0.1.2.3
+    SALT: 123...16...987
+    HASH: 123...32...987
     trailning zeros: 28
+    free-space size: 48
     Free space:      gz_compress=1
                      aes: 256
                      foo=bar

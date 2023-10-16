@@ -1,11 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"os"
 
 	"github.com/ImFstAsFckBoi/flock/pkg/file"
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/term"
 )
 
@@ -14,7 +16,16 @@ func ReadPassword(prompt string) ([]byte, error) {
 	fmt.Print(prompt)
 	passwd, err := term.ReadPassword(0)
 	fmt.Println("")
-	return passwd, err
+	passwdHash := blake2b.Sum256(passwd)
+
+	// Zero out memory for safety ?
+	// Not sure if necessary but feels "safter"
+	_, err = rand.Reader.Read(passwd)
+	if err != nil {
+		return nil, err
+	}
+
+	return passwdHash[:], err
 }
 
 func GetFileArgs() (string, error) {

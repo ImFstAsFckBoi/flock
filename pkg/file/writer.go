@@ -48,7 +48,7 @@ func NewLockWriter(path string, passwd *[]byte, client string, version string, p
 
 	salt := [16]byte(make([]byte, 16))
 	n, err := rand.Reader.Read(salt[:])
-	if n != 16 || err != nil {
+	if err != nil {
 		return nil, err
 	}
 

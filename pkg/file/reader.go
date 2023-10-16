@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
+	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -32,20 +33,15 @@ var deadReader LockReader = LockReader{
 	16,
 }
 
-func NewLockReader(path string, key []byte, salt [16]byte) (*LockReader, error) {
+func NewLockReader(path string, passwd *[]byte) (*LockReader, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
 
 	rw := LockReader{
 		f,
-		c,
+		nil,
 		HeaderInfo{},
 		make([]byte, 16),
 		16,
@@ -53,6 +49,13 @@ func NewLockReader(path string, key []byte, salt [16]byte) (*LockReader, error) 
 	}
 
 	err = rw.ReadHeaderInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	key := argon2.IDKey([]byte(*passwd), rw.Info.Salt[:], 1, 64*1024, 1, 32)
+
+	rw.cipher, err = aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}

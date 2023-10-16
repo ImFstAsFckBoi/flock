@@ -3,12 +3,14 @@ package file
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 
+	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
@@ -38,11 +40,19 @@ var deadWriter LockWriter = LockWriter{
 Wrapper around file to automatically write the lock file header and encrypt
 all written in chunks.
 */
-func NewLockWriter(path string, key []byte, salt [16]byte, client string, version string, perms fs.FileMode) (*LockWriter, error) {
+func NewLockWriter(path string, passwd *[]byte, client string, version string, perms fs.FileMode) (*LockWriter, error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, perms)
 	if err != nil {
 		return nil, err
 	}
+
+	salt := [16]byte(make([]byte, 16))
+	n, err := rand.Reader.Read(salt[:])
+	if n != 16 || err != nil {
+		return nil, err
+	}
+
+	key := argon2.IDKey([]byte(*passwd), salt[:], 1, 64*1024, 1, 32)
 
 	c, err := aes.NewCipher(key)
 	if err != nil {
@@ -69,7 +79,7 @@ func NewLockWriter(path string, key []byte, salt [16]byte, client string, versio
 		return nil, err
 	}
 
-	n, err := f.Write(header)
+	n, err = f.Write(header)
 
 	if n != len(header) || err != nil {
 		return nil, errors.New("Failed to make file header")

@@ -4,22 +4,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ImFstAsFckBoi/flock/pkg/encrypt"
 	"github.com/ImFstAsFckBoi/flock/pkg/file"
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
 	"golang.org/x/term"
 )
 
-func GetPasswordKey(prompt string) ([]byte, error) {
+func ReadPassword(prompt string) ([]byte, error) {
 
 	fmt.Print(prompt)
-	rawPasswd, err := term.ReadPassword(0)
+	passwd, err := term.ReadPassword(0)
 	fmt.Println("")
-	if err != nil {
-		return nil, err
-	}
-
-	return encrypt.BytePadRepeat(rawPasswd, 32), nil
+	return passwd, err
 }
 
 func GetFileArgs() (string, error) {
@@ -44,7 +39,7 @@ func main() {
 	read := true
 
 	if write {
-		key, err := GetPasswordKey("Enter password: ")
+		passwd, err := ReadPassword("Enter password: ")
 		utils.ErrCheck(err)
 		f, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0755)
 		utils.ErrCheck(err)
@@ -53,8 +48,7 @@ func main() {
 		defer f.Close()
 		writer, err := file.NewLockWriter(
 			path+".locked",
-			key,
-			[16]byte{},
+			&passwd,
 			"flock",
 			"0.1",
 			info.Mode().Perm(),
@@ -86,9 +80,9 @@ func main() {
 	}
 
 	if read {
-		key, err := GetPasswordKey("Enter password: ")
+		passwd, err := ReadPassword("Enter password: ")
 		utils.ErrCheck(err)
-		reader, err := file.NewLockReader(path+".locked", key, [16]byte{})
+		reader, err := file.NewLockReader(path+".locked", &passwd)
 		utils.ErrCheck(err)
 
 		println("Free-space:")

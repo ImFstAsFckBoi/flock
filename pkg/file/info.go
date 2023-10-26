@@ -1,8 +1,10 @@
 package file
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
+	"os"
 	"strings"
 )
 
@@ -93,4 +95,45 @@ func (info *HeaderInfo) MakeHeader() ([]byte, error) {
 	}
 
 	return headerBuffer, nil
+}
+
+func (info *HeaderInfo) ReadHeader(file *os.File) error {
+	preBuff := make([]byte, H_PREFSSIZE)
+	_, err := file.ReadAt(preBuff, 0)
+
+	if err != nil {
+		return err
+	}
+
+	if !IsMagicNumber(preBuff[H_MAGICBEGIN:H_MAGICEND]) {
+		return errors.New("Malformed header!")
+	}
+	info.Client = strings.TrimRight(
+		string(preBuff[H_CLIENTBEGIN:H_CLIENTEND]),
+		"\000",
+	)
+
+	info.Version = strings.TrimRight(
+		string(preBuff[H_VERSIONBEGIN:H_VERSIONEND]),
+		"\000",
+	)
+
+	copy(info.Salt[:], preBuff[H_SALTBEGIN:H_SALTEND-1])
+	copy(info.Hash[:], preBuff[H_HASHBEGIN:H_HASHEND-1])
+
+	info.Ntz = binary.BigEndian.Uint32(preBuff[H_NTZBEGIN : H_NTZEND-1])
+	info.Fss = binary.BigEndian.Uint32(preBuff[H_FSSBEGIN : H_FSSEND-1])
+	if info.Fss != 0 {
+
+		fsBuff := make([]byte, info.Fss)
+		file.ReadAt(fsBuff, H_FSSEND)
+		lines := bytes.Split(fsBuff, []byte{'\n'})
+		for _, l := range lines {
+			info.FreeSpace = append(info.FreeSpace, strings.TrimLeft(string(l), "\000"))
+		}
+	} else {
+		info.FreeSpace = nil
+	}
+
+	return nil
 }

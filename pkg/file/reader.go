@@ -1,14 +1,11 @@
 package file
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"encoding/binary"
 	"errors"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
 	"golang.org/x/crypto/argon2"
@@ -48,7 +45,7 @@ func NewLockReader(path string, passwd *[]byte) (*LockReader, error) {
 		16,
 	}
 
-	err = rw.ReadHeaderInfo()
+	err = rw.Info.ReadHeader(rw.File)
 	if err != nil {
 		return nil, err
 	}
@@ -134,47 +131,6 @@ func (rw *LockReader) FillBuffer() (int, error) {
 	rw.bufferStart = 0
 
 	return n, nil
-}
-
-func (rw *LockReader) ReadHeaderInfo() error {
-	preBuff := make([]byte, H_PREFSSIZE)
-	_, err := rw.File.ReadAt(preBuff, 0)
-
-	if err != nil {
-		return err
-	}
-
-	if !IsMagicNumber(preBuff[H_MAGICBEGIN:H_MAGICEND]) {
-		return errors.New("Malformed header!")
-	}
-	rw.Info.Client = strings.TrimRight(
-		string(preBuff[H_CLIENTBEGIN:H_CLIENTEND]),
-		"\000",
-	)
-
-	rw.Info.Version = strings.TrimRight(
-		string(preBuff[H_VERSIONBEGIN:H_VERSIONEND]),
-		"\000",
-	)
-
-	copy(rw.Info.Salt[:], preBuff[H_SALTBEGIN:H_SALTEND-1])
-	copy(rw.Info.Hash[:], preBuff[H_HASHBEGIN:H_HASHEND-1])
-
-	rw.Info.Ntz = binary.BigEndian.Uint32(preBuff[H_NTZBEGIN : H_NTZEND-1])
-	rw.Info.Fss = binary.BigEndian.Uint32(preBuff[H_FSSBEGIN : H_FSSEND-1])
-	if rw.Info.Fss != 0 {
-
-		fsBuff := make([]byte, rw.Info.Fss)
-		rw.File.ReadAt(fsBuff, H_FSSEND)
-		lines := bytes.Split(fsBuff, []byte{'\n'})
-		for _, l := range lines {
-			rw.Info.FreeSpace = append(rw.Info.FreeSpace, strings.TrimLeft(string(l), "\000"))
-		}
-	} else {
-		rw.Info.FreeSpace = nil
-	}
-
-	return nil
 }
 
 func (rw *LockReader) Close() error {

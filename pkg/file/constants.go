@@ -1,5 +1,6 @@
 package file
 
+// Constant header seek values
 const (
 	H_MAGICBEGIN   int64 = 0
 	H_CLIENTBEGIN  int64 = 6
@@ -33,3 +34,6 @@ const (
 	H_MINSIZE   int = 149
 	H_PREFSSIZE int = 128
 )
+
+var HEADER_MAGIC_NUMBER = []byte{1, 9, 6, 5, 0, '\n'}
+var HEADER_TERMINATOR = []byte("==== END HEADER ====\n")

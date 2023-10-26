@@ -21,6 +21,7 @@
         "NTZBEGIN",
         "NTZEND",
         "NTZLEN",
+        "PREFSSIZE",
         "SALTBEGIN",
         "SALTEND",
         "SALTLEN",

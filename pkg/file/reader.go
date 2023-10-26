@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+// A object to read decrypted data from a .locked file
 type LockReader struct {
 	File        *os.File
 	cipher      cipher.Block
@@ -30,6 +31,7 @@ var deadReader LockReader = LockReader{
 	16,
 }
 
+// Create a new LockReader object
 func NewLockReader(path string, passwd *[]byte) (*LockReader, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0644)
 	if err != nil {
@@ -45,7 +47,7 @@ func NewLockReader(path string, passwd *[]byte) (*LockReader, error) {
 		16,
 	}
 
-	err = rw.Info.ReadHeader(rw.File)
+	err = rw.readHeader()
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +66,7 @@ func NewLockReader(path string, passwd *[]byte) (*LockReader, error) {
 	return &rw, nil
 }
 
+// Read decrypted data from file
 func (rw *LockReader) Read(b []byte) (int, error) {
 	dataStart := rw.Info.GetSeeks().data
 	curSeek, err := rw.File.Seek(0, io.SeekCurrent)
@@ -79,7 +82,7 @@ func (rw *LockReader) Read(b []byte) (int, error) {
 	bIdx := 0
 	for bIdx < bLen {
 		if rw.bufferStart >= rw.bufferEnd {
-			_, err := rw.FillBuffer()
+			_, err := rw.fillBuffer()
 			if err == io.EOF && bIdx == 0 {
 				return bIdx, err
 			} else if err == io.EOF {
@@ -107,7 +110,8 @@ func (rw *LockReader) Read(b []byte) (int, error) {
 	return bIdx, nil
 }
 
-func (rw *LockReader) FillBuffer() (int, error) {
+// Fill internal buffer when spent
+func (rw *LockReader) fillBuffer() (int, error) {
 	// TODO: Deal with n | 16 edge case
 	n, err := rw.File.Read(rw.buffer)
 	if err != nil {
@@ -133,6 +137,12 @@ func (rw *LockReader) FillBuffer() (int, error) {
 	return n, nil
 }
 
+// Read file header to internal in-memory header
+func (rw *LockReader) readHeader() error {
+	return rw.Info.ReadHeader(rw.File)
+}
+
+// Close Reader
 func (rw *LockReader) Close() error {
 	return rw.File.Close()
 }

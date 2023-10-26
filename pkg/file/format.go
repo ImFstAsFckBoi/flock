@@ -4,6 +4,7 @@ import (
 	"bytes"
 )
 
+// All seeks in a file header
 type HeaderSeeks struct {
 	magic      int64
 	client     int64
@@ -26,13 +27,7 @@ var DefaultHeaderSeeks HeaderSeeks = HeaderSeeks{
 	-1,
 }
 
-var HEADER_MAGIC_NUMBER = []byte{1, 9, 6, 5, 0, '\n'}
-var HEADER_TERMINATOR = []byte("==== END HEADER ====\n")
-
-/*
-Creates a writable byte buffer of the header and updates info.Fss
-*/
-
+// Check is data array contains magic number
 func IsMagicNumber(data []byte) bool {
 	return bytes.Compare(data, HEADER_MAGIC_NUMBER) == 0
 }

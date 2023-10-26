@@ -16,6 +16,7 @@ import (
 	"github.com/ImFstAsFckBoi/flock/pkg/utils"
 )
 
+// A object to write encrypted data to a .locked file
 type LockWriter struct {
 	File        *os.File
 	Count       int
@@ -36,10 +37,7 @@ var deadWriter LockWriter = LockWriter{
 	0,
 }
 
-/*
-Wrapper around file to automatically write the lock file header and encrypt
-all written in chunks.
-*/
+// Create a new LockWriter
 func NewLockWriter(path string, passwd *[]byte, client string, version string, perms fs.FileMode) (*LockWriter, error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, perms)
 	if err != nil {
@@ -88,6 +86,7 @@ func NewLockWriter(path string, passwd *[]byte, client string, version string, p
 	return &lw, nil
 }
 
+// Write encrypted data to file
 func (lw *LockWriter) Write(p []byte) (int, error) {
 	pLen := len(p)
 
@@ -113,7 +112,7 @@ func (lw *LockWriter) Write(p []byte) (int, error) {
 		}
 
 		if lw.bufferCount >= 16 {
-			_, err := lw.FlushBuffer()
+			_, err := lw.flushBuffer()
 			if err != nil {
 				return flushes * 16, err
 			}
@@ -128,15 +127,17 @@ func (lw *LockWriter) Write(p []byte) (int, error) {
 	return flushes * 16, nil
 }
 
+// Close Writer, flush whats left in buffer
 func (lw *LockWriter) Close() (int, error) {
-	n, err := lw.FlushBuffer()
-	err = errors.Join(err, lw.FlushHeader())
+	n, err := lw.flushBuffer()
+	err = errors.Join(err, lw.flushHeader())
 	err = errors.Join(err, lw.File.Close())
 
 	return n, err
 }
 
-func (lw *LockWriter) FlushBuffer() (int, error) {
+// Flush internal buffer to file
+func (lw *LockWriter) flushBuffer() (int, error) {
 	if lw.bufferCount == 0 {
 		return 0, nil
 	}
@@ -162,7 +163,8 @@ func (lw *LockWriter) FlushBuffer() (int, error) {
 	return n, nil
 }
 
-func (lw *LockWriter) FlushHeader() error {
+// Flush internal in-memory header to file
+func (lw *LockWriter) flushHeader() error {
 	if len(lw.Info.Client) > 29 {
 		return errors.New("Headers 'client' field exceeds maximum length of 29 characters")
 	} else if len(lw.Info.Version) > 29 {

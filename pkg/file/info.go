@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// Object representing a file header in memory
 type HeaderInfo struct {
 	Client    string
 	Version   string
@@ -18,6 +19,7 @@ type HeaderInfo struct {
 	FreeSpace []string
 }
 
+// Create a new HeaderInfo
 func NewHeaderInfo(client string, version string, salt [16]byte, hash [32]byte, freeSpace []string) (*HeaderInfo, error) {
 	info := HeaderInfo{client, version, salt, hash, 0, 0, nil}
 	err := info.UpdateFS(freeSpace)
@@ -27,6 +29,7 @@ func NewHeaderInfo(client string, version string, salt [16]byte, hash [32]byte, 
 	return &info, nil
 }
 
+// Updates Free-space size from current Free-space
 func (info *HeaderInfo) UpdateFSS() uint32 {
 	info.Fss = 0
 	for _, s := range info.FreeSpace {
@@ -35,6 +38,7 @@ func (info *HeaderInfo) UpdateFSS() uint32 {
 	return info.Fss
 }
 
+// Set Free-space to freeSpace. Called HeaderInfo.UpdateFSS()
 func (info *HeaderInfo) UpdateFS(freeSpace []string) error {
 	info.FreeSpace = freeSpace
 	for _, s := range info.FreeSpace {
@@ -46,6 +50,7 @@ func (info *HeaderInfo) UpdateFS(freeSpace []string) error {
 	return nil
 }
 
+// Get Free-space as a byte buffer
 func (info *HeaderInfo) FSAsBytes() []byte {
 	buffer := make([]byte, info.Fss)
 	if info.Fss == 0 || len(info.FreeSpace) == 0 {
@@ -60,6 +65,7 @@ func (info *HeaderInfo) FSAsBytes() []byte {
 	return buffer
 }
 
+// Get where the header file seeks will be from the in memory header
 func (info *HeaderInfo) GetSeeks() HeaderSeeks {
 	seeks := DefaultHeaderSeeks
 	seeks.terminator = H_FREEBEGIN + int64(info.Fss)
@@ -68,6 +74,7 @@ func (info *HeaderInfo) GetSeeks() HeaderSeeks {
 	return seeks
 }
 
+// Creates a writable byte buffer of the header info
 func (info *HeaderInfo) MakeHeader() ([]byte, error) {
 	headerBuffer := make([]byte, H_MINSIZE+int(info.Fss))
 	bytesFS := info.FSAsBytes()
@@ -97,6 +104,7 @@ func (info *HeaderInfo) MakeHeader() ([]byte, error) {
 	return headerBuffer, nil
 }
 
+// Update HeaderInfo by reading header from a file
 func (info *HeaderInfo) ReadHeader(file *os.File) error {
 	preBuff := make([]byte, H_PREFSSIZE)
 	_, err := file.ReadAt(preBuff, 0)

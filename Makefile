@@ -6,6 +6,9 @@ ENTRY := ${PKG}/cmd/flock
 build:
 	go build -o ${BIN}/${BINARY} ${ENTRY}
 
+help:
+	go run ${ENTRY} --help
+
 build-linux32:
 	GOARCH=386   GOOS=linux   go build -o ${BIN}/${BINARY}-linux32 ${ENTRY}
 

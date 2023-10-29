@@ -28,22 +28,7 @@ func ReadPassword(prompt string) ([]byte, error) {
 	return passwdHash[:], err
 }
 
-func GetFileArgs() (string, error) {
-	args := os.Args[1:]
-	file := args[0]
-	_, err := os.Stat(file)
-
-	if err != nil {
-		return "", err
-	}
-
-	return file, nil
-
-}
-
 func main() {
-
-	// path, err := GetFileArgs()
 	path := "./test.txt"
 
 	write := true
